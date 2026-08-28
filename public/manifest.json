@@ -1,0 +1,19 @@
+{
+  "name": "Lembra Personal - Memória do Personal Trainer",
+  "short_name": "Lembra Personal",
+  "description": "Seu aluno. Seus cuidados. Na hora certa. Memória operacional do Personal Trainer.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#f97316",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["fitness", "productivity", "utilities"]
+}

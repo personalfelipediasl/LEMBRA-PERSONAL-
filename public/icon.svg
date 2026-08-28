@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#09090b"/>
+    </linearGradient>
+    <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <!-- App Icon Background -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGrad)" stroke="#f97316" stroke-opacity="0.3" stroke-width="8"/>
+  
+  <!-- Subtle inner ambient circle -->
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#27272a" stroke-width="4" stroke-dasharray="10 10"/>
+  
+  <!-- Core Symbol: Alert/Memory Bell & Muscle Checkmark -->
+  <g filter="url(#glow)">
+    <!-- Bell/Attention Shield -->
+    <path d="M256 100 C 200 100 160 145 160 210 C 160 270 140 300 120 320 C 120 330 128 340 140 340 L 372 340 C 384 340 392 330 392 320 C 372 300 352 270 352 210 C 352 145 312 100 256 100 Z" fill="url(#orangeGrad)" />
+    <!-- Clapper / Point of Attention Dot -->
+    <circle cx="256" cy="380" r="32" fill="#ea580c" />
+    <circle cx="256" cy="380" r="16" fill="#fed7aa" />
+  </g>
+  
+  <!-- Centered Attention Cross/Lightning of Focus -->
+  <path d="M256 160 L 256 250" stroke="#09090b" stroke-width="20" stroke-linecap="round"/>
+  <circle cx="256" cy="290" r="10" fill="#09090b" />
+</svg>

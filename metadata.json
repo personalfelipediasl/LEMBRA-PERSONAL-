@@ -1,0 +1,6 @@
+{
+  "name": "Lembra Personal",
+  "description": "Aplicativo PWA de memória operacional e lembretes para Personal Trainers revisarem cuidados, dores e pontos de atenção dos alunos antes de cada atendimento.",
+  "requestFramePermissions": ["notifications"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
