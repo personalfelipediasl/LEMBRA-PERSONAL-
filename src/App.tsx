@@ -30,6 +30,7 @@ import {
   getNotificationPermission,
   requestNotificationPermission,
   NotificationPermissionState,
+  syncRemindersWithServiceWorker,
 } from './lib/notifications';
 
 // Components
@@ -122,6 +123,10 @@ export default function App() {
 
   // 2. Real-time Clock & Reminder Evaluation Loop
   useEffect(() => {
+    if (students.length > 0) {
+      syncRemindersWithServiceWorker(students, history);
+    }
+
     const timer = setInterval(() => {
       const now = new Date();
       setCurrentTime(now);
@@ -146,6 +151,7 @@ export default function App() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && students.length > 0) {
         setCurrentTime(new Date());
+        syncRemindersWithServiceWorker(students, history);
         checkAndTriggerReminders(students, history, (app, leadTime, msg) => {
           setInAppAlert({
             appointment: app,
@@ -157,7 +163,11 @@ export default function App() {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
   }, [students, history]);
 
   // 3. Computed Today's Appointments & Next Appointment

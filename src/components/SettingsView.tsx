@@ -1,20 +1,24 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Bell,
   Download,
   Upload,
   ShieldCheck,
-  AlertTriangle,
   Smartphone,
   Info,
   CheckCircle2,
   RefreshCw,
   Lock,
   Volume2,
-  HelpCircle,
-  Sparkles,
+  Clock,
+  Radio,
 } from 'lucide-react';
-import { NotificationPermissionState, requestNotificationPermission, sendLocalNotification } from '../lib/notifications';
+import {
+  NotificationPermissionState,
+  requestNotificationPermission,
+  sendLocalNotification,
+  scheduleDelayedTestNotification,
+} from '../lib/notifications';
 import { exportAllData, importAllData, resetToDefaultSeed } from '../lib/db';
 
 interface SettingsViewProps {
@@ -35,8 +39,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [testSent, setTestSent] = useState(false);
+  const [delayTestCountdown, setDelayTestCountdown] = useState<number | null>(null);
   const [isResetting, setIsResetting] = useState(false);
+  const [swActive, setSwActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      setSwActive(true);
+    } else if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(() => setSwActive(true));
+    }
+  }, []);
 
   const handleRequestPermission = async () => {
     await requestNotificationPermission();
@@ -51,6 +65,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       tag: `test-${Date.now()}`,
     });
     setTimeout(() => setTestSent(false), 3000);
+  };
+
+  const handleScheduleDelayedTest = async () => {
+    setDelayTestCountdown(5);
+    await scheduleDelayedTestNotification(5);
+
+    let count = 5;
+    const interval = setInterval(() => {
+      count -= 1;
+      if (count <= 0) {
+        clearInterval(interval);
+        setDelayTestCountdown(null);
+      } else {
+        setDelayTestCountdown(count);
+      }
+    }, 1000);
   };
 
   const handleExportData = async () => {
@@ -89,7 +119,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       }
     };
     reader.readAsText(file);
-    // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -109,17 +138,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           CONFIGURAÇÕES & AJUSTES
         </h2>
         <p className="text-xs text-zinc-400">
-          Notificações, backup local e diretrizes de privacidade.
+          Notificações em segundo plano, backup local e diretrizes de privacidade.
         </p>
       </div>
 
-      {/* 1. STATUS DOS LEMBRETES */}
+      {/* 1. STATUS DOS LEMBRETES & SEGUNDO PLANO */}
       <div className="rounded-2xl bg-[#121215] border border-zinc-800 p-4 space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bell className="w-4 h-4 text-orange-400" />
             <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">
-              STATUS DOS LEMBRETES
+              NOTIFICAÇÕES EM SEGUNDO PLANO
             </h3>
           </div>
 
@@ -130,17 +159,37 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 : 'bg-orange-500/15 text-orange-400 border-orange-500/40'
             }`}
           >
-            {notificationStatus === 'granted' ? '✓ Notificações Permitidas' : '⚠ Permissão Pendente'}
+            {notificationStatus === 'granted' ? '✓ Notificações Ativas' : '⚠ Permissão Pendente'}
           </span>
+        </div>
+
+        {/* Diagnóstico técnico */}
+        <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-xs">
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2
+              className={`w-3.5 h-3.5 ${
+                notificationStatus === 'granted' ? 'text-emerald-400' : 'text-zinc-600'
+              }`}
+            />
+            <span className="text-zinc-300">Permissão do Sistema</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Radio
+              className={`w-3.5 h-3.5 ${
+                swActive ? 'text-emerald-400 animate-pulse' : 'text-zinc-600'
+              }`}
+            />
+            <span className="text-zinc-300">Service Worker (2º Plano)</span>
+          </div>
         </div>
 
         <p className="text-xs text-zinc-300 leading-relaxed">
           {notificationStatus === 'granted'
-            ? 'O navegador está autorizado a emitir alertas sonoros e notificações na tela antes de cada atendimento.'
-            : 'Ative as notificações para receber os lembretes automáticos com o nome do aluno e pontos de atenção antes de cada sessão.'}
+            ? 'O Service Worker está configurado para agendar e disparar alertas sonoros com o nome do aluno e pontos de atenção mesmo com o app minimizado ou em segundo plano.'
+            : 'Ative as notificações para receber os avisos automáticos antes de cada atendimento.'}
         </p>
 
-        <div className="flex flex-wrap gap-2 pt-1">
+        <div className="flex flex-col sm:flex-row gap-2 pt-1">
           {notificationStatus !== 'granted' && (
             <button
               onClick={handleRequestPermission}
@@ -152,23 +201,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           <button
             onClick={handleTestNotification}
-            className="py-2.5 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs flex items-center gap-1.5 border border-zinc-700 transition-colors"
+            className="py-2.5 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 border border-zinc-700 transition-colors"
           >
             <Volume2 className="w-3.5 h-3.5 text-orange-400" />
-            <span>{testSent ? '✓ Alerta Disparado!' : 'Testar Notificação'}</span>
+            <span>{testSent ? '✓ Alerta Disparado!' : 'Testar Imediato'}</span>
+          </button>
+
+          <button
+            onClick={handleScheduleDelayedTest}
+            disabled={delayTestCountdown !== null}
+            className="py-2.5 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 border border-zinc-700 transition-colors"
+          >
+            <Clock className="w-3.5 h-3.5 text-orange-400" />
+            <span>
+              {delayTestCountdown !== null
+                ? `Bloqueie a tela! Disparo em ${delayTestCountdown}s...`
+                : 'Testar em 2º Plano (5s)'}
+            </span>
           </button>
         </div>
 
-        {/* Technical transparency note on PWA background */}
-        <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 text-[11px] text-zinc-400 space-y-1">
-          <div className="flex items-center gap-1.5 font-bold text-zinc-300">
-            <Info className="w-3.5 h-3.5 text-orange-400" />
-            <span>Transparência Técnica (PWA Offline-First):</span>
+        {delayTestCountdown !== null && (
+          <div className="p-2.5 rounded-lg bg-orange-500/10 border border-orange-500/30 text-xs text-orange-300 animate-pulse">
+            ⏱ <strong>Dica de teste:</strong> Minimize o app ou bloqueie a tela do celular agora para ver a notificação chegar em segundo plano!
           </div>
-          <p className="leading-relaxed">
-            Este aplicativo opera 100% no seu dispositivo sem servidor central. Quando o app estiver em primeiro plano ou em segundo plano no navegador/PWA instalado, os lembretes funcionam em tempo real. Mantenha o app na tela inicial para a melhor experiência.
-          </p>
-        </div>
+        )}
       </div>
 
       {/* 2. INSTALAÇÃO PWA */}
@@ -176,12 +233,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex items-center gap-2">
           <Smartphone className="w-4 h-4 text-orange-400" />
           <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">
-            INSTALAR NA TELA INICIAL
+            INSTALAR NA TELA INICIAL (PWA)
           </h3>
         </div>
 
         <p className="text-xs text-zinc-300 leading-relaxed">
-          Instale o <strong>Lembra Personal</strong> como um aplicativo nativo no seu celular para acesso instantâneo sem barras de navegador.
+          Para que as notificações e a sincronização em segundo plano funcionem com máxima confiabilidade no celular, instale o <strong>Lembra Personal</strong> na tela inicial.
         </p>
 
         {installPrompt ? (
@@ -193,11 +250,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             Adicionar à Tela Inicial Agora
           </button>
         ) : (
-          <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-400 space-y-1">
+          <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-400 space-y-1.5">
             <span className="font-bold text-zinc-300 block">Como instalar no seu celular:</span>
-            <ul className="list-disc pl-4 space-y-0.5 text-zinc-300">
-              <li><strong>No iPhone (Safari):</strong> Toque no ícone Compartilhar (quadrado com seta) e selecione <em>&ldquo;Adicionar à Tela de Início&rdquo;</em>.</li>
-              <li><strong>No Android (Chrome):</strong> Toque no menu de três pontinhos no topo e selecione <em>&ldquo;Instalar aplicativo&rdquo;</em>.</li>
+            <ul className="list-disc pl-4 space-y-1 text-zinc-300">
+              <li>
+                <strong>No iPhone (Safari):</strong> Toque no ícone Compartilhar (quadrado com seta para cima) e selecione <em>&ldquo;Adicionar à Tela de Início&rdquo;</em> (requer iOS 16.4+ para notificações push em segundo plano).
+              </li>
+              <li>
+                <strong>No Android (Chrome):</strong> Toque no menu de três pontinhos no topo e selecione <em>&ldquo;Instalar aplicativo&rdquo;</em> ou <em>&ldquo;Adicionar à tela inicial&rdquo;</em>.
+              </li>
             </ul>
           </div>
         )}
